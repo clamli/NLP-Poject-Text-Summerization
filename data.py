@@ -81,46 +81,56 @@ def index(x_tok, indexer):
     return [indexer.index_of(xi) if indexer.index_of(xi) >= 0 else indexer.index_of(UNK_SYMBOL) for xi in x_tok]
 
 
-def index_data(data, input_indexer, output_indexer, example_len_limit=0.0):
+def index_data(data, vocab_indexer, example_len_limit=0.0):
     data_indexed = []
     for (x, y) in data:
         x_tok = tokenize(x)
         y_tok = tokenize(y)
         # y_tok = tokenize(y)[0:example_len_limit]
-        data_indexed.append(Example(x, x_tok, index(x_tok, input_indexer), y, y_tok,
-                                          index(y_tok, output_indexer) + [output_indexer.get_index(EOS_SYMBOL)]))
+        data_indexed.append(Example(x, x_tok, index(x_tok, vocab_indexer), y, y_tok,
+                                          index(y_tok, vocab_indexer) + [vocab_indexer.get_index(EOS_SYMBOL)]))
     return data_indexed
 
 
 # Indexes train and test datasets where all words occurring less than or equal to unk_threshold times are
 # replaced by UNK tokens.
 def index_datasets(train_data, dev_data, example_len_limit=0.0, unk_threshold=0.0):
-    input_word_counts = Counter()
+    # input_word_counts = Counter()
     # Count words and build the indexers
+    # for (x, y) in train_data:
+    #     for word in tokenize(x):
+    #         input_word_counts.increment_count(word, 1.0)
+    # input_indexer = Indexer()
+    # output_indexer = Indexer()
+    # # Reserve 0 for the pad symbol for convenience
+    # input_indexer.get_index(PAD_SYMBOL)
+    # input_indexer.get_index(UNK_SYMBOL)
+    # output_indexer.get_index(PAD_SYMBOL)
+    # output_indexer.get_index(SOS_SYMBOL)
+    # output_indexer.get_index(EOS_SYMBOL)
+    # # Index all input words above the UNK threshold
+    # for word in input_word_counts.keys():
+    #     if input_word_counts.get_count(word) > unk_threshold + 0.5:
+    #         input_indexer.get_index(word)
+    # # Index all output tokens in train
+    # for (x, y) in train_data:
+    #     for y_tok in tokenize(y):
+    #         output_indexer.get_index(y_tok)
+    vocab_indexer = Indexer()
+    vocab_indexer.get_index(PAD_SYMBOL)
+    vocab_indexer.get_index(UNK_SYMBOL)
+    vocab_indexer.get_index(SOS_SYMBOL)
+    vocab_indexer.get_index(EOS_SYMBOL)
     for (x, y) in train_data:
-        for word in tokenize(x):
-            input_word_counts.increment_count(word, 1.0)
-    input_indexer = Indexer()
-    output_indexer = Indexer()
-    # Reserve 0 for the pad symbol for convenience
-    input_indexer.get_index(PAD_SYMBOL)
-    input_indexer.get_index(UNK_SYMBOL)
-    output_indexer.get_index(PAD_SYMBOL)
-    output_indexer.get_index(SOS_SYMBOL)
-    output_indexer.get_index(EOS_SYMBOL)
-    # Index all input words above the UNK threshold
-    for word in input_word_counts.keys():
-        if input_word_counts.get_count(word) > unk_threshold + 0.5:
-            input_indexer.get_index(word)
-    # Index all output tokens in train
-    for (x, y) in train_data:
-        for y_tok in tokenize(y):
-            output_indexer.get_index(y_tok)
+        for x_tok, y_tok in zip(tokenize(x), tokenize(y)):
+            vocab_indexer.get_index(x_tok)
+            vocab_indexer.get_index(y_tok)
+
     # Index things
-    train_data_indexed = index_data(train_data, input_indexer, output_indexer, example_len_limit)
-    dev_data_indexed = index_data(dev_data, input_indexer, output_indexer, example_len_limit)
+    train_data_indexed = index_data(train_data, vocab_indexer, example_len_limit)
+    dev_data_indexed = index_data(dev_data, vocab_indexer, example_len_limit)
     # test_data_indexed = index_data(test_data, input_indexer, output_indexer, example_len_limit)
-    return train_data_indexed, dev_data_indexed, input_indexer, output_indexer
+    return train_data_indexed, dev_data_indexed, vocab_indexer
 
 
 # Geoquery preprocessing adapted from Jia and Liang. Standardizes variable names with De Brujin indices -- just a
